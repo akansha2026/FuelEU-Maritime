@@ -8,6 +8,15 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],
+      include: ["src/**/*.ts"],
+      exclude: [
+        "prisma/**",
+        "src/index.ts",
+        "src/core/ports/**",
+        "src/core/domain/entities.ts",
+        "**/*.test.ts",
+        "**/*.config.*",
+      ],
     },
   },
 });

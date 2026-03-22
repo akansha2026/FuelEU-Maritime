@@ -4,8 +4,8 @@
 
 | Agent | Purpose | Usage Frequency |
 |-------|---------|-----------------|
-| **Cursor Agent (Claude)** | Primary coding assistant - architecture, implementation, debugging | ~80% of tasks |
-| **Gemini** | Research on FuelEU regulations, formula verification | ~20% of tasks |
+| **AI Coding Assistant** | Primary coding assistant - architecture, implementation, debugging | ~80% of tasks |
+| **AI Research Tool** | Research on FuelEU regulations, formula verification | ~20% of tasks |
 
 ---
 
@@ -184,10 +184,10 @@ This one worked perfectly on first try!
 
 ### How I Combined Tools Effectively 🔧
 
-1. Used **Gemini** first to understand FuelEU regulation concepts
-2. Then used **Cursor** to implement with that knowledge
+1. Used **AI research tool** first to understand FuelEU regulation concepts
+2. Then used **AI coding assistant** to implement with that knowledge
 3. Manually verified calculations against the regulation PDF
-4. Used **Cursor** for refactoring after manual fixes
+4. Used **AI coding assistant** for refactoring after manual fixes
 
 ---
 

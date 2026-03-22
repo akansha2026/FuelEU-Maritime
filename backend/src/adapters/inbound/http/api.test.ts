@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import request from "supertest";
 import { createApp } from "../../../infrastructure/server/app";
 import { prisma } from "../../../infrastructure/db/client";
@@ -35,6 +35,17 @@ describe("API Integration Tests", () => {
           fuelConsumption: 4800,
           distance: 11500,
           totalEmissions: 4200,
+          isBaseline: false,
+        },
+        {
+          routeId: "R003",
+          vesselType: "Tanker",
+          fuelType: "MGO",
+          year: 2025,
+          ghgIntensity: 85.0,
+          fuelConsumption: 5100,
+          distance: 12500,
+          totalEmissions: 4700,
           isBaseline: false,
         },
       ],
@@ -111,24 +122,107 @@ describe("API Integration Tests", () => {
       const res = await request(app).get("/compliance/cb");
       expect(res.status).toBe(400);
     });
+
+    it("should return 404 for non-existent ship", async () => {
+      const res = await request(app)
+        .get("/compliance/cb")
+        .query({ shipId: "INVALID", year: 2025 });
+      expect(res.status).toBe(404);
+    });
+  });
+
+  describe("GET /compliance/adjusted-cb", () => {
+    it("should return adjusted CB for a ship", async () => {
+      const res = await request(app)
+        .get("/compliance/adjusted-cb")
+        .query({ shipId: "R001", year: 2025 });
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty("adjustedCB");
+      expect(res.body).toHaveProperty("initialCB");
+      expect(res.body).toHaveProperty("bankedSurplus");
+    });
+
+    it("should return 400 without required params", async () => {
+      const res = await request(app).get("/compliance/adjusted-cb");
+      expect(res.status).toBe(400);
+    });
+
+    it("should return adjusted CB when compliance record exists", async () => {
+      // First create a compliance record
+      await request(app)
+        .get("/compliance/cb")
+        .query({ shipId: "R003", year: 2025 });
+      
+      // Then get adjusted CB
+      const res = await request(app)
+        .get("/compliance/adjusted-cb")
+        .query({ shipId: "R003", year: 2025 });
+      expect(res.status).toBe(200);
+      expect(res.body.shipId).toBe("R003");
+    });
+  });
+
+  describe("GET /banking/records", () => {
+    it("should return empty array when no records", async () => {
+      const res = await request(app)
+        .get("/banking/records")
+        .query({ shipId: "R001", year: 2025 });
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body)).toBe(true);
+    });
+
+    it("should return 400 without required params", async () => {
+      const res = await request(app).get("/banking/records");
+      expect(res.status).toBe(400);
+    });
   });
 
   describe("POST /banking/bank", () => {
-    it("should bank surplus CB", async () => {
+    it("should bank surplus CB for compliant ship", async () => {
+      // R003 has ghgIntensity 85 which is below target, so positive CB
       await request(app)
         .get("/compliance/cb")
-        .query({ shipId: "R002", year: 2025 });
+        .query({ shipId: "R003", year: 2025 });
 
       const res = await request(app)
         .post("/banking/bank")
-        .send({ shipId: "R002", year: 2025 });
+        .send({ shipId: "R003", year: 2025 });
 
-      if (res.status === 201) {
-        expect(res.body).toHaveProperty("amountGco2eq");
-        expect(res.body.amountGco2eq).toBeGreaterThan(0);
-      } else {
-        expect(res.status).toBe(400);
-      }
+      expect(res.status).toBe(201);
+      expect(res.body).toHaveProperty("amountGco2eq");
+      expect(res.body.amountGco2eq).toBeGreaterThan(0);
+    });
+
+    it("should return 400 without required params", async () => {
+      const res = await request(app).post("/banking/bank").send({});
+      expect(res.status).toBe(400);
+    });
+
+    it("should return 400 when trying to bank deficit CB", async () => {
+      // R001 has ghgIntensity 91 which is above target, so negative CB
+      await request(app)
+        .get("/compliance/cb")
+        .query({ shipId: "R001", year: 2025 });
+
+      const res = await request(app)
+        .post("/banking/bank")
+        .send({ shipId: "R001", year: 2025 });
+
+      expect(res.status).toBe(400);
+    });
+  });
+
+  describe("POST /banking/apply", () => {
+    it("should return 400 without required params", async () => {
+      const res = await request(app).post("/banking/apply").send({});
+      expect(res.status).toBe(400);
+    });
+
+    it("should return 400 when amount exceeds banked", async () => {
+      const res = await request(app)
+        .post("/banking/apply")
+        .send({ shipId: "R001", year: 2025, amount: 999999999999 });
+      expect(res.status).toBe(400);
     });
   });
 
@@ -146,6 +240,21 @@ describe("API Integration Tests", () => {
       expect(res.status).toBe(400);
     });
 
+    it("should return 400 for pool with less than 2 members", async () => {
+      const res = await request(app)
+        .post("/pools")
+        .send({
+          year: 2025,
+          members: [{ shipId: "A", adjustedCB: 1000 }],
+        });
+      expect(res.status).toBe(400);
+    });
+
+    it("should return 400 without required params", async () => {
+      const res = await request(app).post("/pools").send({});
+      expect(res.status).toBe(400);
+    });
+
     it("should create valid pool", async () => {
       const res = await request(app)
         .post("/pools")
@@ -160,6 +269,21 @@ describe("API Integration Tests", () => {
       expect(res.body).toHaveProperty("id");
       expect(res.body).toHaveProperty("members");
       expect(res.body.members).toHaveLength(2);
+    });
+
+    it("should correctly allocate surplus to deficit", async () => {
+      const res = await request(app)
+        .post("/pools")
+        .send({
+          year: 2025,
+          members: [
+            { shipId: "X", adjustedCB: 500 },
+            { shipId: "Y", adjustedCB: -300 },
+          ],
+        });
+      expect(res.status).toBe(201);
+      const memberY = res.body.members.find((m: { shipId: string }) => m.shipId === "Y");
+      expect(memberY.cbAfter).toBe(0); // Deficit should be covered
     });
   });
 });

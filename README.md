@@ -176,10 +176,10 @@ Positive CB = surplus (good), Negative CB = deficit (penalty applies)
 ## Running Tests
 
 ```bash
-# Backend - 29 tests (18 unit + 11 integration)
+# Backend - 86 tests
 cd backend && npm test
 
-# Frontend - 9 tests
+# Frontend - 141 tests
 cd frontend && npm test
 
 # With coverage reports
@@ -193,25 +193,24 @@ cd frontend && npm run test:coverage
 
 | File/Directory | Statements | Branches | Functions | Lines |
 |----------------|------------|----------|-----------|-------|
-| **All files** | **65.19%** | **79.56%** | **83.33%** | **65.19%** |
+| **All files** | **96.13%** | **91.47%** | **97.67%** | **96.13%** |
 | **src/core/domain** | | | | |
-| └── formulas.ts | 100% | 87.5% | 100% | 100% |
-| └── entities.ts | - | - | - | - |
+| └── formulas.ts | 100% | 88.23% | 100% | 100% |
 | **src/core/application** | | | | |
-| └── RouteService.ts | 93.75% | 87.5% | 100% | 93.75% |
-| └── PoolingService.ts | 70.58% | 66.66% | 100% | 70.58% |
-| └── ComplianceService.ts | 56.14% | 66.66% | 66.66% | 56.14% |
-| └── BankingService.ts | 31.25% | 50% | 50% | 31.25% |
+| └── RouteService.ts | 100% | 100% | 100% | 100% |
+| └── BankingService.ts | 100% | 100% | 100% | 100% |
+| └── ComplianceService.ts | 100% | 100% | 100% | 100% |
+| └── PoolingService.ts | 76.47% | 80% | 100% | 76.47% |
 | **src/adapters/outbound/postgres** | | | | |
 | └── RouteRepository.ts | 87.87% | 100% | 83.33% | 87.87% |
 | └── PoolRepository.ts | 100% | 100% | 100% | 100% |
 | └── BankRepository.ts | 100% | 100% | 100% | 100% |
-| └── ComplianceRepository.ts | 62.06% | 100% | 50% | 62.06% |
+| └── ComplianceRepository.ts | 100% | 100% | 100% | 100% |
 | **src/adapters/inbound/http** | | | | |
 | └── routeController.ts | 88.57% | 71.42% | 100% | 88.57% |
-| └── poolController.ts | 75% | 75% | 100% | 75% |
-| └── complianceController.ts | 62.22% | 83.33% | 100% | 62.22% |
-| └── bankingController.ts | 38.7% | 50% | 100% | 38.7% |
+| └── poolController.ts | 100% | 100% | 100% | 100% |
+| └── complianceController.ts | 95.55% | 91.66% | 100% | 95.55% |
+| └── bankingController.ts | 95.16% | 87.5% | 100% | 95.16% |
 | **src/shared** | | | | |
 | └── constants.ts | 100% | 100% | 100% | 100% |
 | └── errors.ts | 100% | 100% | 100% | 100% |
@@ -223,23 +222,27 @@ cd frontend && npm run test:coverage
 
 | File/Directory | Statements | Branches | Functions | Lines |
 |----------------|------------|----------|-----------|-------|
-| **All files** | **5.4%** | **36%** | **23.8%** | **5.4%** |
+| **All files** | **100%** | **97.36%** | **100%** | **100%** |
 | **src/shared** | | | | |
 | └── constants.ts | 100% | 100% | 100% | 100% |
+| **src/core/domain** | | | | |
+| └── formulas.ts | 100% | 90% | 100% | 100% |
+| **src/adapters/infrastructure** | | | | |
+| └── apiClient.ts | 100% | 100% | 100% | 100% |
 | **src/adapters/ui/components** | | | | |
 | └── KpiCard.tsx | 100% | 100% | 100% | 100% |
 | **src/adapters/ui/primitives** | | | | |
-| └── cn.ts | 100% | 100% | 100% | 100% |
+| └── All components | 100% | 100% | 100% | 100% |
 
 ### Test Summary
 
 | Category | Tests | Description |
 |----------|-------|-------------|
-| **Backend Unit** | 18 | Domain formulas (CB, penalty, pool allocation, comparison) |
-| **Backend Integration** | 11 | API endpoints via Supertest (routes, compliance, banking, pools) |
-| **Frontend Unit** | 4 | Constants (GHG target calculations) |
-| **Frontend Component** | 5 | KpiCard rendering with variants |
-| **Total** | **38** | All passing ✓ |
+| **Backend Unit** | 62 | Domain formulas, services, constants, errors |
+| **Backend Integration** | 24 | API endpoints via Supertest |
+| **Frontend Unit** | 45 | Constants, formulas, API client |
+| **Frontend Component** | 96 | UI primitives, components |
+| **Total** | **227** | All passing ✓ |
 
 ### What's Tested
 
@@ -256,12 +259,26 @@ cd frontend && npm run test:coverage
 - `POST /routes/:routeId/baseline` - sets baseline, handles 404
 - `GET /routes/comparison` - returns comparison with percentDiff and compliant
 - `GET /compliance/cb` - returns CB, handles missing params
-- `POST /banking/bank` - banks surplus
+- `GET /compliance/adjusted-cb` - returns adjusted CB
+- `GET /banking/records` - returns banking history
+- `POST /banking/bank` - banks surplus, validates CB > 0
+- `POST /banking/apply` - applies banked amount
 - `POST /pools` - creates valid pool, rejects invalid sum
 
+**Backend Services:**
+- RouteService - getAll, setBaseline, getComparison
+- ComplianceService - getComplianceBalance, getAdjustedCB
+- BankingService - getRecords, bankSurplus, applyBanked
+- PoolingService - createPool with validation
+
 **Frontend:**
-- `getGhgTarget` - reduction targets by year
-- `KpiCard` - renders label, value, sublabel, variants
+- `getGhgTarget` - reduction targets by year for all milestone years
+- `computeComplianceBalance` - formula implementation
+- `computePenalty` - penalty calculations
+- `allocatePool` - pool allocation algorithm
+- All UI primitives - Button, Card, Alert, Spinner, Select, DataTable, etc.
+- KpiCard - renders label, value, sublabel, variants
+- API client - all endpoint methods
 
 ## Tech Stack
 

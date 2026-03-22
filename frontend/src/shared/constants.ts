@@ -9,6 +9,10 @@ export const REDUCTION_TARGETS: Record<number, number> = {
   2050: 0.8,
 };
 
+export const VLSFO_LCV_MJ_PER_TONNE = 40200;
+
+export const PENALTY_RATE_EUR = 2400 / 1_000_000;
+
 export function getGhgTarget(year: number): number {
   const sortedYears = Object.keys(REDUCTION_TARGETS)
     .map(Number)
