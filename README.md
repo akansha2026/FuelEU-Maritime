@@ -181,12 +181,87 @@ cd backend && npm test
 
 # Frontend - 9 tests
 cd frontend && npm test
+
+# With coverage reports
+cd backend && npm run test:coverage
+cd frontend && npm run test:coverage
 ```
 
-Tests cover:
-- Domain formulas (CB calculation, pool allocation, penalty)
-- API endpoints (routes, compliance, banking, pools)
-- React components (KpiCard)
+## Test Coverage
+
+### Backend Coverage Report
+
+| File/Directory | Statements | Branches | Functions | Lines |
+|----------------|------------|----------|-----------|-------|
+| **All files** | **65.19%** | **79.56%** | **83.33%** | **65.19%** |
+| **src/core/domain** | | | | |
+| └── formulas.ts | 100% | 87.5% | 100% | 100% |
+| └── entities.ts | - | - | - | - |
+| **src/core/application** | | | | |
+| └── RouteService.ts | 93.75% | 87.5% | 100% | 93.75% |
+| └── PoolingService.ts | 70.58% | 66.66% | 100% | 70.58% |
+| └── ComplianceService.ts | 56.14% | 66.66% | 66.66% | 56.14% |
+| └── BankingService.ts | 31.25% | 50% | 50% | 31.25% |
+| **src/adapters/outbound/postgres** | | | | |
+| └── RouteRepository.ts | 87.87% | 100% | 83.33% | 87.87% |
+| └── PoolRepository.ts | 100% | 100% | 100% | 100% |
+| └── BankRepository.ts | 100% | 100% | 100% | 100% |
+| └── ComplianceRepository.ts | 62.06% | 100% | 50% | 62.06% |
+| **src/adapters/inbound/http** | | | | |
+| └── routeController.ts | 88.57% | 71.42% | 100% | 88.57% |
+| └── poolController.ts | 75% | 75% | 100% | 75% |
+| └── complianceController.ts | 62.22% | 83.33% | 100% | 62.22% |
+| └── bankingController.ts | 38.7% | 50% | 100% | 38.7% |
+| **src/shared** | | | | |
+| └── constants.ts | 100% | 100% | 100% | 100% |
+| └── errors.ts | 100% | 100% | 100% | 100% |
+| **src/infrastructure** | | | | |
+| └── db/client.ts | 100% | 100% | 100% | 100% |
+| └── server/app.ts | 93.54% | 66.66% | 100% | 93.54% |
+
+### Frontend Coverage Report
+
+| File/Directory | Statements | Branches | Functions | Lines |
+|----------------|------------|----------|-----------|-------|
+| **All files** | **5.4%** | **36%** | **23.8%** | **5.4%** |
+| **src/shared** | | | | |
+| └── constants.ts | 100% | 100% | 100% | 100% |
+| **src/adapters/ui/components** | | | | |
+| └── KpiCard.tsx | 100% | 100% | 100% | 100% |
+| **src/adapters/ui/primitives** | | | | |
+| └── cn.ts | 100% | 100% | 100% | 100% |
+
+### Test Summary
+
+| Category | Tests | Description |
+|----------|-------|-------------|
+| **Backend Unit** | 18 | Domain formulas (CB, penalty, pool allocation, comparison) |
+| **Backend Integration** | 11 | API endpoints via Supertest (routes, compliance, banking, pools) |
+| **Frontend Unit** | 4 | Constants (GHG target calculations) |
+| **Frontend Component** | 5 | KpiCard rendering with variants |
+| **Total** | **38** | All passing ✓ |
+
+### What's Tested
+
+**Backend Domain Logic:**
+- `computeEnergyInScope` - fuel to MJ conversion
+- `computeComplianceBalance` - CB calculation for surplus/deficit
+- `computePenalty` - penalty calculation for deficit
+- `computePercentDiff` - route comparison
+- `isCompliant` - target compliance check
+- `allocatePool` - greedy pool allocation with edge cases
+
+**Backend API Endpoints:**
+- `GET /routes` - returns all routes with properties
+- `POST /routes/:routeId/baseline` - sets baseline, handles 404
+- `GET /routes/comparison` - returns comparison with percentDiff and compliant
+- `GET /compliance/cb` - returns CB, handles missing params
+- `POST /banking/bank` - banks surplus
+- `POST /pools` - creates valid pool, rejects invalid sum
+
+**Frontend:**
+- `getGhgTarget` - reduction targets by year
+- `KpiCard` - renders label, value, sublabel, variants
 
 ## Tech Stack
 
@@ -236,3 +311,4 @@ See `backend/prisma/schema.prisma` for full schema.
 - R001 is set as the default baseline
 - Dark mode toggle in the header (persists to localStorage)
 - All API errors return JSON with `{ error: "message" }`
+- Run `npm run test:coverage` in either directory for detailed coverage reports
