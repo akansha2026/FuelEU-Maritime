@@ -111,7 +111,9 @@ export function CompareTab() {
                   backgroundColor: "var(--card)",
                   border: "1px solid var(--border)",
                   borderRadius: "8px",
+                  color: "var(--foreground)",
                 }}
+                labelStyle={{ color: "var(--foreground)" }}
               />
               <ReferenceLine
                 y={GHG_TARGET_2025}
