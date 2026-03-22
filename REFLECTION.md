@@ -1,82 +1,100 @@
 # Reflection on AI Agent Usage
 
-## What I Learned Using AI Agents
+## What I Learned
 
-Working with AI agents (Cursor Agent with Claude and Gemini) on this FuelEU Maritime compliance project taught me several valuable lessons:
+Going into this project, I'd used GitHub Copilot for autocomplete but never really "pair programmed" with an AI agent. This assignment changed my perspective on how to work with these tools effectively.
 
-### 1. Prompting is a Skill
-The quality of output heavily depends on how you frame the question. Vague prompts like "build me a backend" produce generic code, while specific prompts like "implement the compliance balance formula from FuelEU Annex IV using TypeScript with proper typing" yield much better results. I learned to include context, constraints, and expected outputs in my prompts.
+### The Good Surprises
 
-### 2. Domain Knowledge Still Matters
-The AI agents didn't know the specifics of FuelEU Maritime Regulation (EU) 2023/1805. I had to:
-- Read the regulation myself to understand the formulas
-- Verify agent-generated calculations against the spec
-- Correct the pool allocation algorithm when it didn't preserve cbBefore values
+**1. Architecture discussions are actually useful**
 
-AI accelerates implementation but doesn't replace understanding the problem domain.
+I was skeptical about asking an AI for architecture advice - figured it would just give generic textbook answers. But when I described the FuelEU requirements and asked about hexagonal architecture, the agent gave me a practical folder structure that actually made sense for THIS project. It understood that the compliance calculations needed to be isolated from Express/Prisma so they'd be testable.
 
-### 3. Architecture Decisions Require Human Judgment
-When I asked about hexagonal architecture, the agent provided a good starting structure. However, deciding where to draw boundaries (what belongs in core vs adapters) required my own judgment based on the specific requirements and future maintainability needs.
+**2. Boilerplate is where AI shines**
 
-## Efficiency Gains vs Manual Coding
+Writing Express route handlers, Prisma queries, React Query mutations... this stuff is tedious but important. The agent generated 90% of it correctly. I just had to review and tweak. What would've been 2 hours of copy-paste-modify became 20 minutes of review.
 
-| Task | Manual Time Est. | With AI | Speedup |
-|------|------------------|---------|---------|
-| Project scaffolding | 1-2 hours | 15 min | ~5x |
-| Prisma schema + seed | 30 min | 5 min | ~6x |
-| Express controllers | 1 hour | 10 min | ~6x |
-| React components | 2-3 hours | 30 min | ~5x |
-| Unit tests | 1 hour | 15 min | ~4x |
-| TailwindCSS styling | 2 hours | 20 min | ~6x |
+**3. Debugging with context works**
 
-**Overall estimate:** What would have taken 10-12 hours manually was completed in approximately 2 hours with AI assistance—a roughly 5x improvement.
+When I pasted my buggy pool allocation code and described the symptom, the agent identified that I was mutating the original array. It didn't just fix it - it explained WHY immutability mattered in this case. That's better than Stack Overflow because it had my actual code context.
 
-### Where AI Helped Most
-1. **Boilerplate code** - Repetitive patterns like CRUD operations, route handlers
-2. **Type definitions** - Generating interfaces from requirements
-3. **Styling** - TailwindCSS classes for responsive design
-4. **Test scaffolding** - Basic test structure and common assertions
+### The Frustrations
 
-### Where AI Struggled
-1. **Complex business logic** - Pool allocation required manual debugging
-2. **Integration issues** - Prisma adapter configuration needed manual fixes
-3. **Version-specific APIs** - Suggested outdated Recharts syntax
-4. **Edge cases** - Initial implementations missed boundary conditions
+**1. Version mismatches are painful**
 
-## Improvements for Next Time
+The agent confidently generated Recharts v3 syntax when I had v2 installed. Same with Prisma 7 vs 5. It doesn't actually know what versions are in my package.json unless I tell it. Lost probably 45 minutes to this across the project.
 
-### 1. Better Context Management
-I would create a "context file" at the start with:
-- Project requirements summary
-- Tech stack decisions
-- Key domain concepts (GHG intensity, compliance balance, etc.)
-- Reference documentation links
+**2. Business logic still needs a human brain**
 
-This would help maintain consistency across prompts.
+The FuelEU compliance formulas aren't that complex, but the agent couldn't verify them against the regulation. I had to read Annex IV myself, understand what "GHGIEtarget" means, and manually verify the calculations. The agent is a code generator, not a domain expert.
 
-### 2. Incremental Verification
-Rather than generating large chunks of code, I would:
-- Generate smaller pieces
-- Test each piece immediately
-- Commit working code before moving on
-- This catches issues earlier when they're easier to fix
+**3. Sometimes it's faster to just write it myself**
 
-### 3. More Specific Prompts
-Instead of: "Create a banking service"
-Better: "Create a BankingService class implementing IBankingService with these methods: getRecords(shipId, year), bankSurplus(shipId, year), applyBanked(shipId, year, amount). Validate that CB is positive before banking. Use ValidationError for business rule violations."
+For simple utility functions or one-line fixes, asking the agent and waiting for a response is slower than just typing. I learned to use AI for complex/tedious stuff and my own brain for quick edits.
 
-### 4. Leverage Agent Strengths
-- Use AI for code generation, refactoring, and test writing
-- Do manual review for business logic correctness
-- Use AI for documentation and comments
-- Manual review for security considerations
+---
 
-## Conclusion
+## Efficiency Gains
 
-AI agents are powerful productivity multipliers when used correctly. They excel at transforming clear requirements into working code quickly. However, they work best as "pair programming" partners rather than autonomous developers. The human engineer's role shifts from writing every line to:
-- Providing clear requirements
-- Reviewing and validating output
-- Making architectural decisions
-- Ensuring domain correctness
+Here's my honest breakdown of time spent:
 
-This project reinforced that AI agents are tools that amplify developer capabilities rather than replace developer judgment.
+| Task | Without AI (Est.) | With AI (Actual) | Speedup |
+|------|-------------------|------------------|---------|
+| Project scaffolding | 1.5 hours | 20 min | ~4.5x |
+| Backend domain layer | 2 hours | 30 min | ~4x |
+| Backend adapters | 1.5 hours | 25 min | ~3.5x |
+| Frontend components | 3 hours | 1 hour | ~3x |
+| Styling (Tailwind) | 2 hours | 30 min | ~4x |
+| Testing | 1.5 hours | 30 min | ~3x |
+| Debugging/fixes | 1 hour | 45 min | ~1.3x |
+| **Total** | **~12.5 hours** | **~5 hours** | **~2.5x** |
+
+The overall speedup is about 2.5x, not the 5-10x that AI marketing claims. The debugging/fixes category is where AI helps least - I still had to understand the problems myself.
+
+---
+
+## What I'd Do Differently
+
+### 1. Version pinning upfront
+
+Next time, I'd start every conversation with "I'm using these exact versions: [paste package.json dependencies]". Would've avoided the Recharts and Prisma version confusion.
+
+### 2. Smaller, more specific prompts
+
+My early prompts were too broad ("help me build a banking service"). Better prompts are specific: "implement a bankSurplus method that validates CB > 0, creates a BankEntry record, and returns the entry."
+
+### 3. Ask for tests alongside implementation
+
+Instead of generating code then tests separately, I should ask: "implement this function AND write tests for it in the same response." The agent does better when it has to think about edge cases while writing the code.
+
+### 4. Use AI for code review
+
+I didn't do this, but I should've asked: "review this code for potential bugs or improvements." Human code review is valuable, AI code review could catch some issues too.
+
+### 5. Keep a "learnings" doc
+
+By session 4, I'd forgotten some lessons from session 1. Should've kept notes about what works/doesn't work with the specific AI agent.
+
+---
+
+## Honest Assessment
+
+**Would I use AI agents again?** Absolutely. The time savings are real, especially for boilerplate-heavy full-stack work.
+
+**Did it make me a worse programmer?** No. I still had to understand hexagonal architecture, read the FuelEU regulation, debug the pool allocation, and verify all the formulas. The AI just handled the typing.
+
+**Is the code quality lower?** Maybe slightly? Some AI-generated code is more verbose than I'd write. But it's consistent and well-structured. I'd rather have slightly verbose working code than clever broken code.
+
+**What's the real skill now?** Knowing WHEN to use AI and WHAT to ask. Prompt engineering is real, but it's not magic - it's just being specific about what you want.
+
+---
+
+## Final Thought
+
+The biggest mindset shift: AI is not a replacement for understanding. It's a replacement for typing. I still needed to understand:
+- What hexagonal architecture is and why it matters
+- How FuelEU compliance balance is calculated
+- Why React Query invalidation matters
+- What TypeScript strict mode catches
+
+The agent just helped me express that understanding in code faster.

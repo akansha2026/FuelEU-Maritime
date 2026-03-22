@@ -1,83 +1,102 @@
 # FuelEU Maritime Compliance Platform
 
-A full-stack application implementing the FuelEU Maritime compliance module with routes management, compliance balance calculation, banking, and pooling features.
+A full-stack compliance dashboard implementing the FuelEU Maritime regulation requirements - routes management, compliance balance (CB) calculation, banking (Article 20), and pooling (Article 21).
 
-## Architecture
+Built with React + TypeScript + TailwindCSS on the frontend, Node.js + Express + Prisma + PostgreSQL on the backend, following hexagonal architecture.
 
-This project follows **Hexagonal Architecture** (Ports & Adapters / Clean Architecture):
-
-```
-├── backend/
-│   ├── src/
-│   │   ├── core/           # Business logic (framework-agnostic)
-│   │   │   ├── domain/     # Entities, value objects, formulas
-│   │   │   ├── application/# Use cases / services
-│   │   │   └── ports/      # Interfaces (inbound & outbound)
-│   │   ├── adapters/       # Infrastructure implementations
-│   │   │   ├── inbound/    # HTTP controllers
-│   │   │   └── outbound/   # Database repositories
-│   │   ├── infrastructure/ # Server, DB client setup
-│   │   └── shared/         # Constants, errors
-│   └── prisma/             # Database schema & migrations
-│
-├── frontend/
-│   ├── src/
-│   │   ├── core/           # Domain types, ports (no React deps)
-│   │   ├── adapters/
-│   │   │   ├── ui/         # React components, pages
-│   │   │   └── infrastructure/ # API client
-│   │   └── shared/         # Constants, utilities
-```
-
-## Tech Stack
-
-- **Frontend:** React 18, TypeScript, TailwindCSS v4, React Query, Recharts
-- **Backend:** Node.js, Express 5, TypeScript, Prisma ORM, PostgreSQL
-- **Testing:** Vitest, React Testing Library, Supertest
-
-## Setup Instructions
+## Quick Start
 
 ### Prerequisites
-
 - Node.js 20+
 - PostgreSQL 15+
-- npm or pnpm
+- npm
 
-### Backend Setup
+### Backend
 
 ```bash
 cd backend
 npm install
-cp .env.example .env  # Configure DATABASE_URL
-npx prisma generate   # Generate Prisma client
-npm run db:push       # Push schema to database
-npm run db:seed       # Seed initial data
-npm run dev           # Start development server on port 3001
+cp .env.example .env          # Edit DATABASE_URL with your Postgres credentials
+npx prisma generate           # Generate Prisma client
+npx prisma db push           # Create tables
+npm run db:seed              # Seed with sample routes
+npm run dev                  # Runs on http://localhost:3001
 ```
 
-### Frontend Setup
+### Frontend
 
 ```bash
 cd frontend
 npm install
-npm run dev           # Start development server on port 5173
+npm run dev                  # Runs on http://localhost:5173
 ```
 
-## Running Tests
+Open http://localhost:5173 and you should see the dashboard!
 
-```bash
-# Backend tests (unit + integration)
-cd backend && npm test
+## Architecture
 
-# Frontend tests
-cd frontend && npm test
+I followed **hexagonal architecture** (ports & adapters) to keep business logic separate from frameworks:
+
+```
+backend/src/
+├── core/                    # Pure business logic - NO framework imports
+│   ├── domain/              # Entities (Route, ComplianceBalance, etc.)
+│   │                        # Formulas (CB calculation, pool allocation)
+│   ├── application/         # Use cases (RouteService, BankingService, etc.)
+│   └── ports/               # Interfaces for repos and services
+├── adapters/
+│   ├── inbound/http/        # Express controllers
+│   └── outbound/postgres/   # Prisma repositories
+├── infrastructure/          # Server setup, DB client
+└── shared/                  # Constants, error classes
+
+frontend/src/
+├── core/
+│   ├── domain/              # TypeScript types (mirrors backend entities)
+│   └── ports/               # API client interface
+├── adapters/
+│   ├── ui/                  # React components and pages
+│   └── infrastructure/      # Axios API client
+└── shared/                  # Constants, utilities
 ```
 
-## API Endpoints & Sample Responses
+The key principle: `core/` has zero dependencies on Express, Prisma, React, or Axios. This makes the business logic testable and portable.
+
+## Features
+
+### Routes Tab
+- View all routes in a filterable table
+- Filter by vessel type, fuel type, year
+- Set any route as the baseline for comparison
+
+### Compare Tab
+- Bar chart comparing GHG intensity across routes
+- Reference line showing 2025 target (89.34 gCO₂e/MJ)
+- Table with compliance status for each route
+
+### Banking Tab (Article 20)
+- View compliance balance for any ship/year
+- Bank positive CB (surplus) for future use
+- Apply banked surplus to offset deficits
+- See penalty exposure for non-compliant ships
+
+### Pooling Tab (Article 21)
+- Load adjusted CB for all ships
+- Select ships to include in a pool
+- Validation: pool sum must be ≥ 0
+- Greedy allocation transfers surplus to deficit ships
+
+## API Reference
 
 ### Routes
 
-#### `GET /routes` - List all routes
+```
+GET  /routes                    # List all routes
+POST /routes/:routeId/baseline  # Set baseline
+GET  /routes/comparison         # Compare vs baseline
+```
+
+**Sample response - GET /routes:**
 ```json
 [
   {
@@ -95,34 +114,14 @@ cd frontend && npm test
 ]
 ```
 
-#### `POST /routes/:routeId/baseline` - Set baseline route
-```json
-{
-  "id": 1,
-  "routeId": "R001",
-  "isBaseline": true
-}
-```
-
-#### `GET /routes/comparison` - Compare routes against baseline
-```json
-[
-  {
-    "routeId": "R002",
-    "vesselType": "BulkCarrier",
-    "fuelType": "LNG",
-    "year": 2024,
-    "ghgIntensity": 88.0,
-    "baselineGhgIntensity": 91.0,
-    "percentDiff": -3.30,
-    "compliant": true
-  }
-]
-```
-
 ### Compliance
 
-#### `GET /compliance/cb?shipId=R001&year=2025` - Get compliance balance
+```
+GET /compliance/cb?shipId=R001&year=2025           # Get CB
+GET /compliance/adjusted-cb?shipId=R001&year=2025  # Get CB after banking
+```
+
+**Sample response - GET /compliance/cb:**
 ```json
 {
   "shipId": "R001",
@@ -135,60 +134,25 @@ cd frontend && npm test
 }
 ```
 
-#### `GET /compliance/adjusted-cb?shipId=R001&year=2025` - Get adjusted CB
-```json
-{
-  "shipId": "R001",
-  "year": 2025,
-  "initialCB": -341096000,
-  "bankedSurplus": 0,
-  "appliedFromBank": 0,
-  "adjustedCB": -341096000
-}
-```
-
 ### Banking
 
-#### `POST /banking/bank` - Bank positive CB surplus
-Request: `{ "shipId": "R002", "year": 2025 }`
-```json
-{
-  "id": 1,
-  "shipId": "R002",
-  "year": 2025,
-  "amountGco2eq": 263312000,
-  "createdAt": "2025-03-22T12:00:00.000Z"
-}
 ```
-
-#### `POST /banking/apply` - Apply banked surplus
-Request: `{ "shipId": "R002", "year": 2025, "amount": 100000000 }`
-```json
-{
-  "applied": 100000000,
-  "remaining": 163312000
-}
+GET  /banking/records?shipId&year    # Get banking history
+POST /banking/bank                   # Bank surplus (body: {shipId, year})
+POST /banking/apply                  # Apply banked (body: {shipId, year, amount})
 ```
 
 ### Pooling
 
-#### `POST /pools` - Create pool with members
-Request:
-```json
-{
-  "year": 2025,
-  "members": [
-    { "shipId": "R001", "adjustedCB": -300000000 },
-    { "shipId": "R002", "adjustedCB": 500000000 }
-  ]
-}
 ```
-Response:
+POST /pools    # Create pool (body: {year, members: [{shipId, adjustedCB}]})
+```
+
+**Sample response - POST /pools:**
 ```json
 {
   "id": 1,
   "year": 2025,
-  "createdAt": "2025-03-22T12:00:00.000Z",
   "members": [
     { "shipId": "R001", "cbBefore": -300000000, "cbAfter": 0 },
     { "shipId": "R002", "cbBefore": 500000000, "cbAfter": 200000000 }
@@ -196,61 +160,79 @@ Response:
 }
 ```
 
-## Key Formulas (FuelEU Regulation 2023/1805)
+## Key Formulas
 
-| Formula | Description |
+From FuelEU Regulation (EU) 2023/1805:
+
+| Formula | Calculation |
 |---------|-------------|
-| **Target Intensity (2025)** | 89.3368 gCO₂e/MJ (2% below 91.16) |
-| **Energy in Scope** | fuelConsumption × 41,000 MJ/t |
-| **Compliance Balance** | (Target - Actual) × Energy in Scope |
-| **Percent Difference** | ((comparison / baseline) - 1) × 100 |
-| **Penalty** | \|CB\| / (Actual × 41,000) × 2,400 EUR |
+| Target Intensity (2025) | 91.16 × (1 - 0.02) = 89.3368 gCO₂e/MJ |
+| Energy in Scope | fuelConsumption × 41,000 MJ/t |
+| Compliance Balance | (Target - Actual) × Energy |
+| Penalty | \|CB\| ÷ (Actual × 41,000) × 2,400 EUR |
 
-## Dashboard Screenshots
+Positive CB = surplus (good), Negative CB = deficit (penalty applies)
 
-The dashboard provides four main tabs:
+## Running Tests
 
-1. **Routes Tab** - View all routes, filter by vessel/fuel/year, set baseline
-2. **Compare Tab** - Bar chart visualization comparing GHG intensities against target
-3. **Banking Tab** - View CB, bank surplus, apply banked amounts (Article 20)
-4. **Pooling Tab** - Select ships, validate pool sum, create pools (Article 21)
+```bash
+# Backend - 29 tests (18 unit + 11 integration)
+cd backend && npm test
 
-*Screenshots available when running the application at http://localhost:5173*
+# Frontend - 9 tests
+cd frontend && npm test
+```
 
-## Project Structure
+Tests cover:
+- Domain formulas (CB calculation, pool allocation, penalty)
+- API endpoints (routes, compliance, banking, pools)
+- React components (KpiCard)
+
+## Tech Stack
+
+**Frontend:**
+- React 18 + TypeScript
+- TailwindCSS v4 (with dark mode)
+- React Query for data fetching
+- Recharts for visualization
+- Radix UI for accessible components
+
+**Backend:**
+- Node.js + Express 5
+- TypeScript (strict mode)
+- Prisma ORM + PostgreSQL
+- Vitest + Supertest for testing
+
+## Database Schema
+
+```sql
+routes          # Voyage data (ghg_intensity, fuel_consumption, etc.)
+ship_compliance # Computed CB snapshots
+bank_entries    # Banked surplus records
+pools           # Pool registry
+pool_members    # Pool allocations (cb_before, cb_after)
+```
+
+See `backend/prisma/schema.prisma` for full schema.
+
+## Project Files
 
 ```
-FuelEU-Maritime/
-├── README.md                 # This file
-├── AGENT_WORKFLOW.md         # AI agent usage documentation
-├── REFLECTION.md             # Reflection on AI agent usage
+├── README.md              # You're reading this
+├── AGENT_WORKFLOW.md      # How I used AI agents
+├── REFLECTION.md          # What I learned
 ├── backend/
-│   ├── package.json
-│   ├── tsconfig.json
-│   ├── vitest.config.ts
-│   ├── eslint.config.js
-│   ├── prisma/
-│   │   ├── schema.prisma     # Database schema
-│   │   └── seed.ts           # Seed data
-│   └── src/
-│       ├── core/domain/      # Entities, formulas
-│       ├── core/application/ # Services
-│       ├── core/ports/       # Interfaces
-│       ├── adapters/         # Controllers, repositories
-│       └── infrastructure/   # Server, DB client
+│   ├── src/               # TypeScript source
+│   ├── prisma/            # Schema + seed
+│   └── package.json
 └── frontend/
-    ├── package.json
-    ├── tsconfig.json
-    ├── vite.config.ts
-    ├── vitest.config.ts
-    ├── eslint.config.js
-    └── src/
-        ├── core/             # Domain types, ports
-        ├── adapters/ui/      # React components
-        ├── adapters/infrastructure/ # API client
-        └── shared/           # Constants
+    ├── src/               # React source
+    └── package.json
 ```
 
-## License
+## Notes
 
-MIT
+- The seed data includes 5 routes matching the assignment spec
+- R001 is set as the default baseline
+- Dark mode toggle in the header (persists to localStorage)
+- All API errors return JSON with `{ error: "message" }`

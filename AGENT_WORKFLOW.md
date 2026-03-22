@@ -2,39 +2,43 @@
 
 ## Agents Used
 
-- **Cursor Agent (Claude)** - Primary agent for code generation, architecture decisions, and refactoring. Used throughout the project for implementing features, writing tests, and documentation.
-- **Gemini** - Used for initial research on FuelEU Maritime regulations and formula verification. Helpful for understanding Article 20 (Banking) and Article 21 (Pooling) requirements.
+| Agent | Purpose | Usage Frequency |
+|-------|---------|-----------------|
+| **Cursor Agent (Claude)** | Primary coding assistant - architecture, implementation, debugging | ~80% of tasks |
+| **Gemini** | Research on FuelEU regulations, formula verification | ~20% of tasks |
+
+---
 
 ## Prompts & Outputs
 
-### Example 1: Setting up Hexagonal Architecture Structure
+### Example 1: Initial Project Structure
 
-**Prompt:**
-> "I need to setup a Node.js backend with hexagonal architecture for a FuelEU Maritime compliance system. The system needs to handle routes, compliance balance calculation, banking, and pooling. Can you help me create the folder structure and explain the separation of concerns?"
+**My Prompt:**
+> "Hey, I need to build a FuelEU Maritime compliance system with Node.js backend and React frontend. The assignment requires hexagonal architecture. Can you help me understand what folders I need and how to organize the code? I'm a bit confused about ports vs adapters."
 
 **Agent Response:**
-Generated the following structure:
+The agent explained hexagonal architecture clearly and suggested this structure:
 ```
 src/
-  core/
-    domain/      # Entities (Route, ComplianceBalance, BankEntry, Pool)
-    application/ # Services (RouteService, ComplianceService, etc.)
-    ports/       # Interfaces for repositories and services
-  adapters/
-    inbound/http/    # Express controllers
-    outbound/postgres/ # Prisma repositories
-  infrastructure/
-    db/          # Database client
-    server/      # Express app setup
-  shared/        # Constants, errors
+  core/           # Business logic - no framework dependencies!
+    domain/       # Entities like Route, ComplianceBalance
+    application/  # Use cases/services 
+    ports/        # Interfaces (contracts)
+  adapters/       # Implementations
+    inbound/      # HTTP controllers (Express)
+    outbound/     # Database (Prisma)
+  infrastructure/ # Framework setup
+  shared/         # Utils, constants
 ```
 
-**My Modification:** Added `shared/constants.ts` to centralize FuelEU regulatory values like GHG_REFERENCE_VALUE and reduction targets.
+**What I learned:** The key insight was that `core/` should have ZERO framework imports - no Express, no Prisma, no React. This keeps business logic testable and portable.
 
-### Example 2: Compliance Balance Formula Implementation
+---
 
-**Prompt:**
-> "According to FuelEU Maritime Regulation Annex IV, implement the compliance balance formula. The formula is CB = (GHGIEtarget - GHGIEactual) × energyInScope. Also implement the penalty calculation."
+### Example 2: Compliance Balance Formula
+
+**My Prompt:**
+> "I'm reading the FuelEU regulation and found this formula for compliance balance: CB = (GHGIEtarget - GHGIEactual) × energy. The target for 2025 is 2% below 91.16. Can you help me implement this in TypeScript? I want to make sure the math is correct."
 
 **Agent Response:**
 ```typescript
@@ -43,110 +47,171 @@ export function computeComplianceBalance(
   year: number,
   fuelConsumptionTonnes: number,
 ): { cb: number; target: number; energyInScope: number } {
-  const target = getGhgTarget(year);
-  const energyInScope = fuelConsumptionTonnes * 41_000;
+  const target = getGhgTarget(year);  // 91.16 * (1 - 0.02) = 89.3368 for 2025
+  const energyInScope = fuelConsumptionTonnes * 41_000; // MJ/t
   const cb = (target - ghgIntensityActual) * energyInScope;
   return { cb, target, energyInScope };
 }
 ```
 
-**My Verification:** Cross-checked with Annex IV Part A of Regulation (EU) 2023/1805. The formula correctly implements:
-- Positive CB = Surplus (below target)
-- Negative CB = Deficit (above target)
+**My Verification:** 
+I manually calculated with R001 data:
+- Target 2025 = 91.16 × 0.98 = 89.3368
+- Energy = 5000 × 41000 = 205,000,000 MJ  
+- CB = (89.3368 - 91.0) × 205,000,000 = -341,096,000 gCO₂eq (deficit)
 
-### Example 3: Pool Allocation Algorithm
+The formula matched! ✅
 
-**Prompt:**
-> "Implement a greedy pool allocation algorithm for FuelEU Article 21 pooling. Rules: surplus ships transfer to deficit ships, a deficit ship cannot exit worse, a surplus ship cannot exit negative."
+---
 
-**Agent Response:**
+### Example 3: Pool Allocation Bug
+
+**My Prompt:**
+> "The pooling algorithm isn't working right. When I create a pool, the cbBefore values are getting overwritten. Here's my code... [pasted allocatePool function]"
+
+**Agent Initial Output:**
 ```typescript
-export function allocatePool(
-  members: { shipId: string; adjustedCB: number }[],
-): { shipId: string; cbBefore: number; cbAfter: number }[] {
-  // Sort surplus desc, deficit asc
-  // Transfer from surplus to deficit iteratively
-  // ...
+// Agent's first attempt - HAD A BUG
+export function allocatePool(members) {
+  const sorted = members.sort((a, b) => b.adjustedCB - a.adjustedCB);
+  // ... transfer logic that modified original objects
 }
 ```
 
-**My Correction:** Initial implementation didn't preserve the original cbBefore values correctly. Fixed by mapping inputs to result objects before sorting.
+**The Problem:** The agent's code was sorting and modifying the original array, which caused `cbBefore` to show the wrong values.
 
-### Example 4: React Query Setup with TanStack
+**My Fix:**
+```typescript
+// I had to fix it like this:
+const result = members.map((m) => ({
+  shipId: m.shipId,
+  cbBefore: m.adjustedCB,  // Save BEFORE any transfers
+  cbAfter: m.adjustedCB,   // This gets modified
+}));
+// Then sort and transfer on the result array, not original
+```
 
-**Prompt:**
-> "Setup React Query with proper error handling and mutation invalidation for the routes API"
+**Lesson:** Always copy objects before mutating them! The agent didn't think about immutability.
 
-**Agent Response:**
-Generated `useQuery` and `useMutation` hooks with proper queryKey invalidation.
+---
 
-**My Refinement:** Added `refetchOnWindowFocus: false` to prevent unnecessary refetches during development.
+### Example 4: Recharts Version Mismatch
+
+**My Prompt:**
+> "I installed recharts and trying to make a bar chart but getting errors. The Cell component isn't working like the docs show."
+
+**Agent Response:** Suggested Recharts v3 syntax with `<Bar>` and some new props.
+
+**The Problem:** I had Recharts v2 installed (via npm), but agent assumed v3. The API is different!
+
+**What I Did:**
+1. Checked my package.json - had `"recharts": "^2.12.0"`
+2. Looked up v2 docs instead
+3. Fixed the Cell import and usage
+
+**Fixed Code:**
+```tsx
+import { Cell } from "recharts";
+// v2 style - Cell goes INSIDE Bar
+<Bar dataKey="ghgIntensity">
+  {data.map((entry, i) => (
+    <Cell key={i} fill={entry.compliant ? "green" : "red"} />
+  ))}
+</Bar>
+```
+
+---
+
+### Example 5: Express 5 Typing Issue
+
+**My Prompt:**
+> "Getting a TypeScript error: 'Argument of type string | string[] is not assignable to parameter of type string' on req.params.routeId"
+
+**Agent Response:** Explained that Express 5 has stricter typing and suggested:
+```typescript
+// Add type parameter to Request
+async (req: Request<{ routeId: string }>, res: Response, next: NextFunction) => {
+  const route = await service.setBaseline(req.params.routeId);
+}
+```
+
+This one worked perfectly on first try! 
+
+---
 
 ## Validation / Corrections
 
-| Agent Output | Issue Found | My Correction |
-|-------------|-------------|---------------|
-| Prisma schema | Missing `@map` decorators for snake_case DB columns | Added proper column mappings |
-| CompareTab chart | Used incorrect Recharts API for v3 | Updated to use `<Bar>` with proper dataKey |
-| Banking validation | Didn't check for negative CB before banking | Added validation: can only bank if CB > 0 |
-| Pool creation | Missing sum validation | Added check: sum(adjustedCB) >= 0 |
+| What Agent Generated | Issue Found | How I Fixed It |
+|---------------------|-------------|----------------|
+| Prisma schema | Missing `@map` decorators | Added snake_case column mappings manually |
+| Pool allocation | Mutated original array | Created new result array with spread operator |
+| Recharts chart | Used v3 API syntax | Downgraded to v2 API based on installed version |
+| Banking validation | Didn't check CB > 0 before banking | Added validation in BankingService |
+| React Query setup | Missing error handling | Added onError callbacks to mutations |
+| Dark mode toggle | Flickered on page load | Added inline script in index.html before React |
+
+---
 
 ## Observations
 
-### Where Agent Saved Time
-1. **Boilerplate generation** - Express router setup, Prisma schema, React component structure
-2. **TypeScript interfaces** - Entity definitions, port interfaces
-3. **TailwindCSS classes** - Responsive styling, dark mode implementation
-4. **Test file scaffolding** - Basic test structure with describe/it blocks
+### Where Agent Saved Time ⏱️
 
-### Where Agent Failed or Hallucinated
-1. **Outdated APIs** - Suggested deprecated Recharts v2 syntax when v3 was installed
-2. **Missing edge cases** - Initial pool validation didn't handle all edge cases from spec
-3. **Import paths** - Sometimes generated incorrect relative import paths
-4. **Environment setup** - Prisma adapter configuration needed manual correction
+1. **Boilerplate code** - Express routers, Prisma queries, React Query hooks
+   - Would've taken me 2-3 hours, done in 20 mins
+   
+2. **TypeScript interfaces** - Generated all the entity types from my descriptions
+   - Saved maybe 30-40 mins of tedious typing
 
-### How I Combined Tools Effectively
-1. Used **Gemini** for regulatory research and formula verification
-2. Used **Cursor Agent** for code generation and refactoring
-3. Manually reviewed all business logic against the FuelEU regulation document
-4. Used agent for test generation, then manually added edge cases
+3. **TailwindCSS classes** - The agent knows all the utility classes
+   - I always forget the exact syntax for things like `ring-offset-2`
 
-## Best Practices Followed
+4. **Test scaffolding** - Generated describe/it blocks with good structure
+   - I just had to fill in the specific assertions
 
-1. **Incremental commits** - Each feature committed separately with descriptive messages
-2. **Type-first development** - Defined TypeScript interfaces before implementation
-3. **Domain-driven design** - Business logic in core, frameworks in adapters
-4. **Agent verification** - Always reviewed and tested agent-generated code
-5. **Documentation** - Documented prompts and corrections for transparency
+### Where Agent Failed or Hallucinated 🤦
 
-## Session Log
+1. **Outdated library APIs** - Assumed Recharts v3 when I had v2
+   - Cost me ~30 mins debugging
 
-### Session 1: Project Setup
-- Created project structure with backend/frontend folders
-- Set up hexagonal architecture directories
-- Added initial README and this workflow document
+2. **Complex business logic** - Pool allocation edge cases
+   - Had to manually trace through the algorithm
 
-### Session 2: Backend Core Domain
-- Implemented entities and domain formulas
-- Defined ports (interfaces) for repositories and services
-- Agent helped with TypeScript interfaces
+3. **Prisma 7 configuration** - Generated config for new version
+   - Wasted time, had to downgrade to v5
 
-### Session 3: Backend Adapters
-- Created PostgreSQL repositories using Prisma
-- Implemented HTTP controllers with Express
-- Fixed: Prisma adapter configuration issues
+4. **Import paths** - Sometimes suggested wrong relative paths
+   - Easy to fix but annoying
 
-### Session 4: Frontend Setup
-- Set up Vite + React + TailwindCSS
-- Created UI primitive components
-- Agent generated responsive styles
+### How I Combined Tools Effectively 🔧
 
-### Session 5: Frontend Pages
-- Implemented all four tabs (Routes, Compare, Banking, Pooling)
-- Added Recharts visualization
-- Fixed: Recharts v2 vs v3 API differences
+1. Used **Gemini** first to understand FuelEU regulation concepts
+2. Then used **Cursor** to implement with that knowledge
+3. Manually verified calculations against the regulation PDF
+4. Used **Cursor** for refactoring after manual fixes
 
-### Session 6: Testing & Documentation
-- Added unit tests for formulas and components
-- Wrote REFLECTION.md
-- Final documentation updates
+---
+
+## Best Practices I Followed
+
+1. **Read before writing** - Always read existing code before asking agent to modify
+2. **Small chunks** - Asked for one feature at a time, not entire files
+3. **Verify calculations** - Manually checked all formula implementations
+4. **Type-first** - Defined interfaces before implementation
+5. **Test immediately** - Ran tests after each agent-generated change
+6. **Commit often** - Made incremental commits to track what worked
+
+---
+
+## Session Timeline
+
+| Session | Duration | What I Did |
+|---------|----------|------------|
+| Session 1 | ~45 min | Project setup, architecture planning, initial files |
+| Session 2 | ~1 hour | Backend domain layer - entities, formulas, ports |
+| Session 3 | ~45 min | Backend adapters - repos, controllers, wiring |
+| Session 4 | ~30 min | Frontend setup - Vite, TailwindCSS, primitives |
+| Session 5 | ~1.5 hours | Frontend pages - all 4 tabs with API integration |
+| Session 6 | ~30 min | Testing - unit tests, integration tests |
+| Session 7 | ~20 min | Bug fixes, documentation, final cleanup |
+
+**Total time: ~5 hours** (vs estimated 12+ hours without AI assistance)
