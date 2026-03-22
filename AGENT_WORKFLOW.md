@@ -2,8 +2,8 @@
 
 ## Agents Used
 
-- **Cursor Agent (Claude)** - Primary agent for code generation, architecture decisions, and refactoring
-- **Gemini** - Used for initial research on FuelEU Maritime regulations and formula verification
+- **Cursor Agent (Claude)** - Primary agent for code generation, architecture decisions, and refactoring. Used throughout the project for implementing features, writing tests, and documentation.
+- **Gemini** - Used for initial research on FuelEU Maritime regulations and formula verification. Helpful for understanding Article 20 (Banking) and Article 21 (Pooling) requirements.
 
 ## Prompts & Outputs
 
@@ -118,3 +118,35 @@ Generated `useQuery` and `useMutation` hooks with proper queryKey invalidation.
 3. **Domain-driven design** - Business logic in core, frameworks in adapters
 4. **Agent verification** - Always reviewed and tested agent-generated code
 5. **Documentation** - Documented prompts and corrections for transparency
+
+## Session Log
+
+### Session 1: Project Setup
+- Created project structure with backend/frontend folders
+- Set up hexagonal architecture directories
+- Added initial README and this workflow document
+
+### Session 2: Backend Core Domain
+- Implemented entities and domain formulas
+- Defined ports (interfaces) for repositories and services
+- Agent helped with TypeScript interfaces
+
+### Session 3: Backend Adapters
+- Created PostgreSQL repositories using Prisma
+- Implemented HTTP controllers with Express
+- Fixed: Prisma adapter configuration issues
+
+### Session 4: Frontend Setup
+- Set up Vite + React + TailwindCSS
+- Created UI primitive components
+- Agent generated responsive styles
+
+### Session 5: Frontend Pages
+- Implemented all four tabs (Routes, Compare, Banking, Pooling)
+- Added Recharts visualization
+- Fixed: Recharts v2 vs v3 API differences
+
+### Session 6: Testing & Documentation
+- Added unit tests for formulas and components
+- Wrote REFLECTION.md
+- Final documentation updates
