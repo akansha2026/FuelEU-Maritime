@@ -1,0 +1,145 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=0.7in,top=0.6in,bottom=0.6in]{geometry}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{multicol}
+
+% Colors
+\definecolor{primary}{HTML}{007AFF}
+\definecolor{darkgray}{HTML}{1D1D1F}
+\definecolor{lightgray}{HTML}{6E6E73}
+
+% Hyperlink styling
+\hypersetup{
+    colorlinks=true,
+    linkcolor=primary,
+    urlcolor=primary,
+}
+
+% Reduce spacing
+\setlength{\parskip}{0pt}
+\setlength{\parindent}{0pt}
+
+\begin{document}
+
+% Title Block
+\begin{center}
+    {\LARGE\bfseries\color{darkgray} FuelEU Maritime Compliance Platform}\\[0.4em]
+    {\large\color{lightgray} Full-Stack Developer Assignment Submission}\\[0.3em]
+    {\small March 2026}
+\end{center}
+
+\vspace{0.8em}
+\hrule
+\vspace{0.8em}
+
+% Two column layout for compact info
+\begin{multicols}{2}
+
+\textbf{\color{darkgray}GitHub Repository}\\[0.2em]
+\href{https://github.com/akansha2026/FuelEU-Maritime}{\texttt{github.com/akansha2026/FuelEU-Maritime}}
+
+\vspace{0.6em}
+\textbf{\color{darkgray}Submission Date}\\[0.2em]
+March 22, 2026
+
+\columnbreak
+
+\textbf{\color{darkgray}Development Time}\\[0.2em]
+Approximately 8 hours (AI assisted)
+
+\vspace{0.6em}
+\textbf{\color{darkgray}Commit History}\\[0.2em]
+28 incremental commits over 2 days
+
+\end{multicols}
+
+\vspace{0.5em}
+\hrule
+\vspace{0.8em}
+
+\textbf{\large\color{darkgray} Documentation Files}
+\vspace{0.4em}
+
+\begin{tabular}{@{}ll@{}}
+\texttt{README.md} & Project setup, architecture diagram, API documentation, test coverage \\
+\texttt{AGENT\_WORKFLOW.md} & AI agent prompts, outputs, corrections, and observations \\
+\texttt{REFLECTION.md} & Essay on learnings from AI-assisted development \\
+\end{tabular}
+
+\vspace{0.8em}
+\textbf{\large\color{darkgray} Test Coverage}
+\vspace{0.4em}
+
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Layer} & \textbf{Tests} & \textbf{Statements} & \textbf{Branches} & \textbf{Functions} \\
+\midrule
+Backend (Node.js) & 86 & 96.13\% & 91.47\% & 97.67\% \\
+Frontend (React) & 141 & 100\% & 97.36\% & 100\% \\
+\midrule
+\textbf{Total} & \textbf{227} & & & \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.8em}
+\textbf{\large\color{darkgray} Features Implemented}
+\vspace{0.3em}
+
+\begin{itemize}[leftmargin=1.2em,itemsep=0.1em,topsep=0.2em]
+    \item \textbf{Routes Tab} -- Filterable table, set regulatory baseline
+    \item \textbf{Compare Tab} -- Bar chart with 89.34 gCO\textsubscript{2}e/MJ target line, compliance status
+    \item \textbf{Banking Tab} -- Article 20: View CB, bank surplus, apply to deficits
+    \item \textbf{Pooling Tab} -- Article 21: Select ships, validate sum $\geq$ 0, greedy allocation
+    \item \textbf{Dark/Light Mode} -- Smooth transition, localStorage persistence
+\end{itemize}
+
+\vspace{0.6em}
+\textbf{\large\color{darkgray} Technology Stack}
+\vspace{0.4em}
+
+\begin{tabular}{@{}ll@{}}
+\textbf{Frontend} & React 18, TypeScript (strict), TailwindCSS v4, React Query, Recharts \\
+\textbf{Backend} & Node.js, Express 5, TypeScript (strict), Prisma ORM \\
+\textbf{Database} & PostgreSQL 15+ \\
+\textbf{Testing} & Vitest, Supertest, React Testing Library \\
+\textbf{Architecture} & Hexagonal (Ports \& Adapters / Clean Architecture) \\
+\end{tabular}
+
+\vspace{0.8em}
+\textbf{\large\color{darkgray} Project Structure}
+\vspace{0.4em}
+
+\begin{multicols}{2}
+\small
+\texttt{backend/src/}
+\begin{itemize}[leftmargin=1em,itemsep=0em,topsep=0em]
+    \item \texttt{core/} -- Domain, application, ports
+    \item \texttt{adapters/} -- HTTP, Postgres
+    \item \texttt{infrastructure/} -- Server, DB
+    \item \texttt{shared/} -- Constants, errors
+\end{itemize}
+
+\columnbreak
+
+\texttt{frontend/src/}
+\begin{itemize}[leftmargin=1em,itemsep=0em,topsep=0em]
+    \item \texttt{core/} -- Types, ports
+    \item \texttt{adapters/ui/} -- Components, pages
+    \item \texttt{adapters/infrastructure/} -- API client
+    \item \texttt{shared/} -- Constants
+\end{itemize}
+\end{multicols}
+
+\vspace{0.6em}
+\begin{center}
+\textcolor{lightgray}{\rule{0.35\textwidth}{0.3pt}}\\[0.3em]
+{\footnotesize\color{lightgray} AI Assisted Development}
+\end{center}
+
+\end{document}
