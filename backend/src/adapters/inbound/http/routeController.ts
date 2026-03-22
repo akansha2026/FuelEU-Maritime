@@ -15,7 +15,7 @@ export function createRouteController(service: IRouteService): Router {
 
   router.post(
     "/:routeId/baseline",
-    async (req: Request, res: Response, next: NextFunction) => {
+    async (req: Request<{ routeId: string }>, res: Response, next: NextFunction) => {
       try {
         const route = await service.setBaseline(req.params.routeId);
         res.json(route);
